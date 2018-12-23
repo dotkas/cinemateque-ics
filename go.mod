@@ -1,4 +1,4 @@
-module dfi-ics
+module github.com/dotkas/cinemateque-ics
 
 require (
 	github.com/PuerkitoBio/goquery v1.5.0

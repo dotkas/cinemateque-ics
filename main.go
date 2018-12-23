@@ -2,9 +2,9 @@ package main
 
 import (
 	"bufio"
-	"dfi-ics/helpers"
-	"dfi-ics/ical"
 	"fmt"
+	"github.com/dotkas/cinemateque-ics/helpers"
+	"github.com/dotkas/cinemateque-ics/ical"
 	"net/http"
 	"os"
 	"regexp"
