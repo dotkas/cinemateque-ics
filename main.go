@@ -15,10 +15,17 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-const LOCATION = "Cinemateket, Lønporten 2, 1121 København K, Denmark"
+const (
+	LOCATION = "Cinemateket, Lønporten 2, 1121 København K, Denmark"
+
+	SELECT_TITLE       = "body > div.layout > div > div.layout__top > header > div.header__wrapper.js-header-body > div > div > div > div > div > p.header__hero__title"
+	SELECT_EVENTS      = "#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__aside > div.supplementary__list > div > div > p"
+	SELECT_RUNTIME     = "#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__content > div.text.layout__unit > p:nth-child(3)"
+	SELECT_DESCRIPTION = "#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__content > div.text.layout__unit > p:nth-child(1)"
+)
 
 func getRuntime(doc *goquery.Document) (int, error) {
-	blockWithRuntime := doc.Find("#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__content > div.text.layout__unit > p:nth-child(3)").First().Text()
+	blockWithRuntime := doc.Find(SELECT_RUNTIME).First().Text()
 	r := regexp.MustCompile("(?P<runtime>\\d*)\\smin\\.")
 	parsed := r.FindStringSubmatch(blockWithRuntime)
 	if len(parsed) < 2 {
@@ -34,7 +41,7 @@ func getRuntime(doc *goquery.Document) (int, error) {
 }
 
 func getDescription(doc *goquery.Document) (string, error) {
-	description := doc.Find("#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__content > div.text.layout__unit > p:nth-child(1)").First().Text()
+	description := doc.Find(SELECT_DESCRIPTION).First().Text()
 
 	if description == "" {
 		return description, fmt.Errorf("no description found in document")
@@ -44,7 +51,7 @@ func getDescription(doc *goquery.Document) (string, error) {
 }
 
 func getTitle(doc *goquery.Document) (string, error) {
-	title := doc.Find("body > div.layout > div > div.layout__top > header > div.header__wrapper.js-header-body > div > div > div > div > div > p.header__hero__title").First().Text()
+	title := doc.Find(SELECT_TITLE).First().Text()
 
 	if title == "" {
 		return title, fmt.Errorf("no title found in document")
@@ -89,7 +96,7 @@ func getEvents(url string) ([]ical.VEvent, error) {
 	}
 
 	// Finds the available times of the event
-	doc.Find("#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__aside > div.supplementary__list > div > div > p").Each(func(i int, s *goquery.Selection) {
+	doc.Find(SELECT_EVENTS).Each(func(i int, s *goquery.Selection) {
 		fmt.Printf("Located time: %d: %s\n", i, s.Text())
 
 		parsed, err := helpers.ParseDate(s.Text())
@@ -120,7 +127,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	fmt.Printf("Events: %v\n", events)
 
 	calendar := ical.NewBasicVCalendar()
@@ -131,7 +137,7 @@ func main() {
 
 	f, err := os.Create("events.ics")
 	if err != nil {
-		log.Fatal("couldn't open destination file: %v", err)
+		log.Fatalf("couldn't open destination file: %v", err)
 	}
 
 	defer f.Close()
