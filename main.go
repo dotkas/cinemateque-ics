@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -61,7 +62,6 @@ func getTitle(doc *goquery.Document) (string, error) {
 }
 
 func getEvents(url string) ([]ical.VEvent, error) {
-	// Request the HTML page.
 	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -72,13 +72,10 @@ func getEvents(url string) ([]ical.VEvent, error) {
 		return nil, fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
 	}
 
-	// Load the HTML document
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
 	}
-
-	events := make([]ical.VEvent, 0)
 
 	title, err := getTitle(doc)
 	if err != nil {
@@ -96,8 +93,9 @@ func getEvents(url string) ([]ical.VEvent, error) {
 	}
 
 	// Finds the available times of the event
+	events := make([]ical.VEvent, 0)
 	doc.Find(SELECT_EVENTS).Each(func(i int, s *goquery.Selection) {
-		fmt.Printf("Located time: %d: %s\n", i, s.Text())
+		log.Printf("%d: Located time: %s\n", i, s.Text())
 
 		parsed, err := helpers.ParseDate(s.Text())
 		if err != nil {
@@ -121,25 +119,30 @@ func getEvents(url string) ([]ical.VEvent, error) {
 }
 
 func main() {
-	url := "https://www.dfi.dk/cinemateket/biograf/alle-film/film/big-blue"
+	url := flag.String("url", "", "write the URL from dfi.dk you wish to convert to an ICS file")
+	flag.Parse()
 
-	events, err := getEvents(url)
+	if *url == "" {
+		log.Fatal("Please define a URL")
+	}
+
+	//url := "https://www.dfi.dk/cinemateket/biograf/alle-film/film/big-blue"
+
+	events, err := getEvents(*url)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Events: %v\n", events)
 
 	calendar := ical.NewBasicVCalendar()
 	for _, event := range events {
-		event := event
-		calendar.VComponent = append(calendar.VComponent, &event)
+		e := event // Avoid memory re-use (https://golang.org/ref/spec#For_range)
+		calendar.VComponent = append(calendar.VComponent, &e)
 	}
 
 	f, err := os.Create("events.ics")
 	if err != nil {
 		log.Fatalf("couldn't open destination file: %v", err)
 	}
-
 	defer f.Close()
 
 	if err := calendar.Encode(f); err != nil {
