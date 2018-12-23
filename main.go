@@ -129,6 +129,10 @@ func main() {
 	}
 
 	f, err := os.Create("events.ics")
+	if err != nil {
+		log.Fatal("couldn't open destination file: %v", err)
+	}
+
 	defer f.Close()
 
 	if err := calendar.Encode(f); err != nil {
