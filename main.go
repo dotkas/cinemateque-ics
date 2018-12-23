@@ -125,6 +125,7 @@ func main() {
 
 	calendar := ical.NewBasicVCalendar()
 	for _, event := range events {
+		event := event
 		calendar.VComponent = append(calendar.VComponent, &event)
 	}
 
