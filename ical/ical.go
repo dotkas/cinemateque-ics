@@ -48,7 +48,7 @@ func (c *VCalendar) Encode(w io.Writer) error {
 				continue
 			}
 
-			if _, err := fmt.Fprintf(w, "%s:%s\r\n", k+v); err != nil {
+			if _, err := fmt.Fprintf(w, "%s:%s\r\n", k, v); err != nil {
 				return err
 			}
 		}

@@ -1,15 +1,16 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"github.com/dotkas/cinemateque-ics/helpers"
-	"github.com/dotkas/cinemateque-ics/ical"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/dotkas/cinemateque-ics/helpers"
+	"github.com/dotkas/cinemateque-ics/ical"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -130,8 +131,9 @@ func main() {
 	f, err := os.Create("events.ics")
 	defer f.Close()
 
-	w := bufio.NewWriter(f)
-	calendar.Encode(w)
+	if err := calendar.Encode(f); err != nil {
+		log.Fatal(err)
+	}
 
 	return
 }
