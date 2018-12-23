@@ -117,11 +117,11 @@ func (e *VEvent) EncodeIcal(w io.Writer) error {
 		return err
 	}
 
-	//if len(e.Tzid) != 0 && e.Tzid != "UTC" {
-	//	if _, err := fmt.Fprintf(w, "TZID:%s:%s\r\n", e.Tzid); err != nil {
-	//		return err
-	//	}
-	//}
+	if len(e.Tzid) != 0 && e.Tzid != "UTC" {
+		if _, err := fmt.Fprintf(w, "TZID:%s\r\n", e.Tzid); err != nil {
+			return err
+		}
+	}
 
 	if _, err := fmt.Fprintf(w, "SUMMARY:%s\r\n", e.Summary); err != nil {
 		return err
