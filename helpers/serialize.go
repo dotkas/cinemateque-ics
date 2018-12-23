@@ -11,8 +11,6 @@ func MustSerialize(v string) string {
 
 	if strings.ContainsAny(v, ";:\\\",") {
 		v = strings.Replace(v, ",", "\\,", -1)
-		v = strings.Replace(v, "\"", "\\\"", -1)
-		v = strings.Replace(v, "\\", "\\\\", -1)
 	}
 
 	if len(v) > 75 {
