@@ -3,10 +3,11 @@ package ical
 // https://www.ietf.org/rfc/rfc2445.txt
 
 import (
-	"bufio"
-	"github.com/google/uuid"
+	"fmt"
 	"io"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -30,16 +31,15 @@ func NewBasicVCalendar() *VCalendar {
 }
 
 func (c *VCalendar) Encode(w io.Writer) error {
-	var b = bufio.NewWriter(w)
 
-	if _, err := b.WriteString("BEGIN:VCALENDAR\r\n"); err != nil {
+	if _, err := fmt.Fprint(w, "BEGIN:VCALENDAR\r\n"); err != nil {
 		return err
 	}
 
 	// use a slice map to preserve order during for range
 	attrs := []map[string]string{
-		{"VERSION:": c.Version},
-		{"CALSCALE:": c.Calscale},
+		{"VERSION": c.Version},
+		{"CALSCALE": c.Calscale},
 	}
 
 	for _, item := range attrs {
@@ -48,23 +48,22 @@ func (c *VCalendar) Encode(w io.Writer) error {
 				continue
 			}
 
-			if _, err := b.WriteString(k + v + "\r\n"); err != nil {
+			if _, err := fmt.Fprintf(w, "%s:%s\r\n", k+v); err != nil {
 				return err
 			}
 		}
 	}
 
 	for _, component := range c.VComponent {
-		if err := component.EncodeIcal(b); err != nil {
+		if err := component.EncodeIcal(w); err != nil {
 			return err
 		}
 	}
 
-	if _, err := b.WriteString("END:VCALENDAR\r\n"); err != nil {
-		return err
-	}
+	_, err := fmt.Fprint(w, "END:VCALENDAR\r\n")
 
-	return b.Flush()
+	return err
+
 }
 
 type VComponent interface {
@@ -101,12 +100,11 @@ func (e *VEvent) EncodeIcal(w io.Writer) error {
 		tzidTxt = "TZID=" + e.Tzid + ";"
 	}
 
-	b := bufio.NewWriter(w)
-	if _, err := b.WriteString("BEGIN:VEVENT\r\n"); err != nil {
+	if _, err := fmt.Fprint(w, "BEGIN:VEVENT\r\n"); err != nil {
 		return err
 	}
 
-	if _, err := b.WriteString("DTSTAMP:" + time.Now().UTC().Format(stampLayout) + "\r\n"); err != nil {
+	if _, err := fmt.Fprintf(w, "DTSTAMP:%s\r\n", time.Now().UTC().Format(stampLayout)); err != nil {
 		return err
 	}
 
@@ -115,45 +113,44 @@ func (e *VEvent) EncodeIcal(w io.Writer) error {
 		return err
 	}
 
-	if _, err := b.WriteString("UID:" + uid.String() + "\r\n"); err != nil {
+	if _, err := fmt.Fprintf(w, "UID:%s\r\n", uid); err != nil {
 		return err
 	}
 
 	if len(e.Tzid) != 0 && e.Tzid != "UTC" {
-		if _, err := b.WriteString("TZID:" + e.Tzid + "\r\n"); err != nil {
+		if _, err := fmt.Fprintf(w, "TZID:%s\r\n", e.Tzid); err != nil {
 			return err
 		}
 	}
 
-	if _, err := b.WriteString("SUMMARY:" + e.Summary + "\r\n"); err != nil {
+	if _, err := fmt.Fprintf(w, "SUMMARY:%s\r\n", e.Summary); err != nil {
 		return err
 	}
 
-	if _, err := b.WriteString("URL:" + e.Url + "\r\n"); err != nil {
+	if _, err := fmt.Fprintf(w, "URL:%s\r\n", e.Url); err != nil {
 		return err
 	}
 
-	if _, err := b.WriteString("LOCATION:" + e.Location + "\r\n"); err != nil {
+	if _, err := fmt.Fprintf(w, "LOCATION:%s\r\n", e.Location); err != nil {
 		return err
 	}
 
 	if e.Description != "" {
-		if _, err := b.WriteString("DESCRIPTION:" + e.Description + "\r\n"); err != nil {
+		if _, err := fmt.Fprintf(w, "DESCRIPTION:%s\r\n", e.Description); err != nil {
 			return err
 		}
 	}
 
-	if _, err := b.WriteString("DTSTART;" + tzidTxt + "VALUE=" + timeStampType + ":" + e.Start.Format(timeStampLayout) + "\r\n"); err != nil {
+	if _, err := fmt.Fprintf(w, "DTSTART;%sVALUE=%s:%s\r\n", tzidTxt, timeStampType, e.Start.Format(timeStampLayout)); err != nil {
 		return err
 	}
 
-	if _, err := b.WriteString("DTEND;" + tzidTxt + "VALUE=" + timeStampType + ":" + e.End.Format(timeStampLayout) + "\r\n"); err != nil {
+	if _, err := fmt.Fprintf(w, "DTEND;%sVALUE=%s:%s\r\n", tzidTxt, timeStampType, e.End.Format(timeStampLayout)); err != nil {
 		return err
 	}
 
-	if _, err := b.WriteString("END:VEVENT\r\n"); err != nil {
-		return err
-	}
+	_, err = fmt.Fprint(w, "END:VEVENT\r\n")
 
-	return b.Flush()
+	return err
+
 }
