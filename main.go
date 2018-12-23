@@ -19,36 +19,52 @@ import (
 const (
 	LOCATION = "Cinemateket, Lønporten 2, 1121 København K, Denmark"
 
-	SELECT_TITLE       = "body > div.layout > div > div.layout__top > header > div.header__wrapper.js-header-body > div > div > div > div > div > p.header__hero__title"
-	SELECT_EVENTS      = "#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__aside > div.supplementary__list > div > div > p"
-	SELECT_RUNTIME     = "#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__content > div.text.layout__unit > p:nth-child(3)"
-	SELECT_DESCRIPTION = "#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__content > div.text.layout__unit > p:nth-child(1)"
+	SELECT_TITLE = "body > div.layout > div > div.layout__top > header > div.header__wrapper.js-header-body > div > div > div > div > div > p.header__hero__title"
+
+	SELECT_SCHEDULE_NORMAL = "#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__aside > div.supplementary__list > div > div > p"
+	SELECT_SCHEDULE_EVENT  = "#block-dficinemateketeventpageblockdfi-cinemateket-event-page-block > div.supplementary > div > div.supplementary__aside > div.supplementary__list > div > div > p"
+
+	SELECT_RUNTIME_NORMAL = "#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__content > div.text.layout__unit > p:nth-child(3)"
+	SELECT_RUNTIME_EVENT  = "#block-dficinemateketeventpageblockdfi-cinemateket-event-page-block > div.supplementary > div > div.supplementary__content > div:nth-child(2) > p:nth-child(6)"
+
+	SELECT_DESCRIPTION_NORMAL = "#block-dfifilmpageblockdfi-cinemateket-film-page-block > div.supplementary > div > div.supplementary__content > div.text.layout__unit > p:nth-child(1)"
+	SELECT_DESCRIPTION_EVENT  = "#block-dficinemateketeventpageblockdfi-cinemateket-event-page-block > div.supplementary > div > div.supplementary__content > div:nth-child(2) > p:nth-child(4)"
 )
 
 func getRuntime(doc *goquery.Document) (int, error) {
-	blockWithRuntime := doc.Find(SELECT_RUNTIME).First().Text()
-	r := regexp.MustCompile("(?P<runtime>\\d*)\\smin\\.")
-	parsed := r.FindStringSubmatch(blockWithRuntime)
-	if len(parsed) < 2 {
-		return 0, fmt.Errorf("could not parse blockWithRuntime: %v", parsed)
+	attempts := []string{SELECT_RUNTIME_NORMAL, SELECT_RUNTIME_EVENT}
+	for _, attempt := range attempts {
+		blockWithRuntime := doc.Find(attempt).First().Text()
+		r := regexp.MustCompile("(?P<runtime>\\d*)\\smin\\.")
+		parsed := r.FindStringSubmatch(blockWithRuntime)
+		if len(parsed) < 2 {
+			continue
+		}
+
+		runtime, err := strconv.Atoi(parsed[1])
+		if err != nil {
+			return 0, fmt.Errorf("could not typecast %s to int", parsed)
+		}
+
+		return runtime, nil
 	}
 
-	runtime, err := strconv.Atoi(parsed[1])
-	if err != nil {
-		return 0, fmt.Errorf("could not typecast %s to int", parsed)
-	}
-
-	return runtime, nil
+	return 0, fmt.Errorf("could not localize runtime in provided HTML file")
 }
 
 func getDescription(doc *goquery.Document) (string, error) {
-	description := doc.Find(SELECT_DESCRIPTION).First().Text()
+	attempts := []string{SELECT_DESCRIPTION_NORMAL, SELECT_DESCRIPTION_EVENT}
+	for _, attempt := range attempts {
+		description := doc.Find(attempt).First().Text()
 
-	if description == "" {
-		return description, fmt.Errorf("no description found in document")
+		if description == "" {
+			continue
+		}
+
+		return description, nil
+
 	}
-
-	return description, nil
+	return "", fmt.Errorf("no description found in document")
 }
 
 func getTitle(doc *goquery.Document) (string, error) {
@@ -94,26 +110,29 @@ func getEvents(url string) ([]ical.VEvent, error) {
 
 	// Finds the available times of the event
 	events := make([]ical.VEvent, 0)
-	doc.Find(SELECT_EVENTS).Each(func(i int, s *goquery.Selection) {
-		log.Printf("%d: Located time: %s\n", i, s.Text())
+	attempts := []string{SELECT_SCHEDULE_NORMAL, SELECT_SCHEDULE_EVENT}
+	for _, attempt := range attempts {
+		doc.Find(attempt).Each(func(i int, s *goquery.Selection) {
+			log.Printf("%d: Located time: %s\n", i, s.Text())
 
-		parsed, err := helpers.ParseDate(s.Text())
-		if err != nil {
-			panic(err)
-		}
+			parsed, err := helpers.ParseDate(s.Text())
+			if err != nil {
+				panic(err)
+			}
 
-		e := ical.VEvent{
-			Summary:     helpers.MustSerialize(title),
-			Start:       parsed,
-			End:         parsed.Add(time.Minute * time.Duration(runtime)),
-			Description: helpers.MustSerialize(desc),
-			Location:    helpers.MustSerialize(LOCATION),
-			Url:         url,
-			AllDay:      false,
-			Tzid:        "Europe/Copenhagen",
-		}
-		events = append(events, e)
-	})
+			e := ical.VEvent{
+				Summary:     helpers.MustSerialize(title),
+				Start:       parsed,
+				End:         parsed.Add(time.Minute * time.Duration(runtime)),
+				Description: helpers.MustSerialize(desc),
+				Location:    helpers.MustSerialize(LOCATION),
+				Url:         url,
+				AllDay:      false,
+				Tzid:        "Europe/Copenhagen",
+			}
+			events = append(events, e)
+		})
+	}
 
 	return events, nil
 }
@@ -126,11 +145,9 @@ func main() {
 		log.Fatal("Please define a URL")
 	}
 
-	//url := "https://www.dfi.dk/cinemateket/biograf/alle-film/film/big-blue"
-
 	events, err := getEvents(*url)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Error: %v\n", err)
 	}
 
 	calendar := ical.NewBasicVCalendar()

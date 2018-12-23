@@ -92,12 +92,12 @@ func (e *VEvent) EncodeIcal(w io.Writer) error {
 		timeStampLayout = dateTimeLayout
 		timeStampType = "DATE-TIME"
 		if len(e.Tzid) == 0 || e.Tzid == "UTC" {
-			timeStampLayout = timeStampLayout + "Z"
+			timeStampLayout = fmt.Sprintf("%sZ", timeStampLayout)
 		}
 	}
 
 	if len(e.Tzid) != 0 && e.Tzid != "UTC" {
-		tzidTxt = "TZID=" + e.Tzid + ";"
+		tzidTxt = fmt.Sprintf("TZID=%s", e.Tzid)
 	}
 
 	if _, err := fmt.Fprint(w, "BEGIN:VEVENT\r\n"); err != nil {
@@ -117,11 +117,11 @@ func (e *VEvent) EncodeIcal(w io.Writer) error {
 		return err
 	}
 
-	if len(e.Tzid) != 0 && e.Tzid != "UTC" {
-		if _, err := fmt.Fprintf(w, "TZID:%s\r\n", e.Tzid); err != nil {
-			return err
-		}
-	}
+	//if len(e.Tzid) != 0 && e.Tzid != "UTC" {
+	//	if _, err := fmt.Fprintf(w, "TZID:%s:%s\r\n", e.Tzid); err != nil {
+	//		return err
+	//	}
+	//}
 
 	if _, err := fmt.Fprintf(w, "SUMMARY:%s\r\n", e.Summary); err != nil {
 		return err
@@ -141,11 +141,11 @@ func (e *VEvent) EncodeIcal(w io.Writer) error {
 		}
 	}
 
-	if _, err := fmt.Fprintf(w, "DTSTART;%sVALUE=%s:%s\r\n", tzidTxt, timeStampType, e.Start.Format(timeStampLayout)); err != nil {
+	if _, err := fmt.Fprintf(w, "DTSTART;%s;VALUE=%s:%s\r\n", tzidTxt, timeStampType, e.Start.Format(timeStampLayout)); err != nil {
 		return err
 	}
 
-	if _, err := fmt.Fprintf(w, "DTEND;%sVALUE=%s:%s\r\n", tzidTxt, timeStampType, e.End.Format(timeStampLayout)); err != nil {
+	if _, err := fmt.Fprintf(w, "DTEND;%s;VALUE=%s:%s\r\n", tzidTxt, timeStampType, e.End.Format(timeStampLayout)); err != nil {
 		return err
 	}
 

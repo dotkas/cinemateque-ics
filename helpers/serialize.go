@@ -9,9 +9,8 @@ import (
 func MustSerialize(v string) string {
 	b := bytes.NewBufferString("")
 
-	if strings.ContainsAny(v, ";:\\\",") {
-		v = strings.Replace(v, ",", "\\,", -1)
-	}
+	v = strings.Replace(v, ",", "\\,", -1)
+	v = strings.Replace(v, "\n", "\\n", -1)
 
 	if len(v) > 75 {
 		if _, err := fmt.Fprintln(b, v[:75]); err != nil {
@@ -37,7 +36,7 @@ func MustSerialize(v string) string {
 		}
 	}
 
-	if _, err := fmt.Fprintln(b, v); err != nil {
+	if _, err := fmt.Fprint(b, v); err != nil {
 		panic(err)
 
 	}
