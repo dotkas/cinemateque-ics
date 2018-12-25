@@ -3,11 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dotkas/cinemateque-ics/helpers"
@@ -77,6 +79,12 @@ func getTitle(doc *goquery.Document) (string, error) {
 	return title, nil
 }
 
+type ErrInvalidStatusCode int
+
+func (e ErrInvalidStatusCode) Error() string {
+	return fmt.Sprintf("invalid status code; expected 200, got: %v", int(e))
+}
+
 func getEvents(url string) ([]ical.VEvent, error) {
 	res, err := http.Get(url)
 	if err != nil {
@@ -85,7 +93,7 @@ func getEvents(url string) ([]ical.VEvent, error) {
 
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
+		return nil, ErrInvalidStatusCode(res.StatusCode)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
@@ -137,17 +145,55 @@ func getEvents(url string) ([]ical.VEvent, error) {
 	return events, nil
 }
 
-func main() {
-	url := flag.String("url", "", "write the URL from dfi.dk you wish to convert to an ICS file")
-	flag.Parse()
+func eventHandler(rw http.ResponseWriter, req *http.Request) {
 
-	if *url == "" {
-		log.Fatal("Please define a URL")
+	rw.Header().Set("content-type", "text/calendar")
+
+	eventURL := req.URL
+	eventURL.Scheme = "https"
+	eventURL.Host = "www.dfi.dk"
+
+	if !strings.HasPrefix(eventURL.Path, "/cinemateket/biograf/") {
+		http.Error(rw, "Invalid URL", http.StatusNotFound)
+		return
 	}
 
-	events, err := getEvents(*url)
+	if err := convert(eventURL.String(), rw); err != nil {
+
+		switch typedErr := err.(type) {
+
+		case ErrInvalidStatusCode:
+			log.Printf("invalid status code from url (%v), relaying: %v", eventURL, int(typedErr))
+			rw.WriteHeader(int(typedErr))
+			return
+
+		}
+
+		log.Printf("error while converting event from url (%v): %v", eventURL, err)
+		http.Error(rw, "Error fetching event", http.StatusInternalServerError)
+		return
+	}
+
+}
+
+func startServer(addr string) error {
+
+	s := &http.Server{
+		Addr:         addr,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		Handler:      http.HandlerFunc(eventHandler),
+	}
+
+	return s.ListenAndServe()
+
+}
+
+func convert(url string, w io.Writer) error {
+
+	events, err := getEvents(url)
 	if err != nil {
-		log.Fatalf("Error: %v\n", err)
+		return err
 	}
 
 	calendar := ical.NewBasicVCalendar()
@@ -156,14 +202,37 @@ func main() {
 		calendar.VComponent = append(calendar.VComponent, &e)
 	}
 
+	return calendar.Encode(w)
+
+}
+
+var (
+	url    = flag.String("url", "", "write the URL from dfi.dk you wish to convert to an ICS file")
+	listen = flag.String("listen", "", "Listen on this address for incoming web requests to convert to ICS")
+)
+
+func main() {
+
+	flag.Parse()
+
+	if *url == "" && *listen == "" {
+		log.Fatal("Please define a URL or a listen address")
+	}
+
+	if *listen != "" {
+		log.Fatal(startServer(*listen))
+	}
+
+	// Fall back to local, filebased conversion
+
 	f, err := os.Create("events.ics")
 	if err != nil {
 		log.Fatalf("couldn't open destination file: %v", err)
 	}
 	defer f.Close()
 
-	if err := calendar.Encode(f); err != nil {
-		log.Fatal(err)
+	if err := convert(*url, f); err != nil {
+		log.Fatalf("couldn't convert event: %v", err)
 	}
 
 	return
