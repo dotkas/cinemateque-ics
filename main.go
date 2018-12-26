@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -97,6 +98,7 @@ func getEvents(url string) ([]ical.VEvent, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("Located title: %s", title)
 
 	runtime, err := getRuntime(doc)
 	if err != nil {
@@ -137,13 +139,22 @@ func getEvents(url string) ([]ical.VEvent, error) {
 	return events, nil
 }
 
-func getEventsFromFile(file string) ([]ical.VEvent, error) {
-	//urls, err := getUrlsFromFile(file)
-	//if err != nil {
-	//	return nil, err
-	//}
+func getEventsFromFile(path string) ([]ical.VEvent, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
 
-	urls := []string{"hest", "hest"}
+	var urls []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		urls = append(urls, scanner.Text())
+	}
+
+	if scanner.Err() != nil {
+		return nil, scanner.Err()
+	}
 
 	events := make([]ical.VEvent, 0)
 	for _, u := range urls {
@@ -159,10 +170,6 @@ func getEventsFromFile(file string) ([]ical.VEvent, error) {
 
 	return events, nil
 }
-
-//func getEventsFromUrl() ([]ical.VEvent, error) {
-//
-//}
 
 func generateIcalFile(events []ical.VEvent) error {
 	calendar := ical.NewBasicVCalendar()
