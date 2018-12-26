@@ -2,8 +2,11 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/dotkas/cinemateque-ics/ical"
 	"io"
 	"log"
@@ -66,6 +69,12 @@ func convert(events []ical.VEvent, w io.Writer) error {
 	return calendar.Encode(w)
 }
 
+func HandleRequest(ctx context.Context) (string, error) {
+	lc, _ := lambdacontext.FromContext(ctx)
+	fmt.Print(lc)
+	return "Hello World!", nil
+}
+
 func main() {
 	url := flag.String("url", "", "write the URL from dfi.dk you wish to convert to an ICS file")
 	inputFile := flag.String("file", "", "a plain text file with newline-seperated URLs")
@@ -80,6 +89,10 @@ func main() {
 	if *listen != "" {
 		log.Fatal(startServer(*listen))
 		return
+	}
+
+	if os.Getenv("USE_LAMBDA") == "True" {
+		lambda.Start(HandleRequest)
 	}
 
 	if *inputFile != "" {
