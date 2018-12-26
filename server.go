@@ -1,11 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 )
+
+type ErrInvalidStatusCode int
+
+func (e ErrInvalidStatusCode) Error() string {
+	return fmt.Sprintf("invalid status code; expected 200, got: %v", int(e))
+}
 
 func eventHandler(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("content-type", "text/calendar")
