@@ -1,5 +1,5 @@
 # Configuration
-BINARY_NAME=.build/cin2ics
+BINARY_NAME=dist/cin2ics
 MAIN_PACKAGE=main.go
 
 all:
