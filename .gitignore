@@ -1,3 +1,4 @@
 *.ics
+*.txt
 .idea
 .build

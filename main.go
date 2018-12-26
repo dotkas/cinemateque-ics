@@ -137,19 +137,34 @@ func getEvents(url string) ([]ical.VEvent, error) {
 	return events, nil
 }
 
-func main() {
-	url := flag.String("url", "", "write the URL from dfi.dk you wish to convert to an ICS file")
-	flag.Parse()
+func getEventsFromFile(file string) ([]ical.VEvent, error) {
+	//urls, err := getUrlsFromFile(file)
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	if *url == "" {
-		log.Fatal("Please define a URL")
+	urls := []string{"hest", "hest"}
+
+	events := make([]ical.VEvent, 0)
+	for _, u := range urls {
+		subEvents, err := getEvents(u)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, event := range subEvents {
+			events = append(events, event)
+		}
 	}
 
-	events, err := getEvents(*url)
-	if err != nil {
-		log.Fatalf("Error: %v\n", err)
-	}
+	return events, nil
+}
 
+//func getEventsFromUrl() ([]ical.VEvent, error) {
+//
+//}
+
+func generateIcalFile(events []ical.VEvent) error {
 	calendar := ical.NewBasicVCalendar()
 	for _, event := range events {
 		e := event // Avoid memory re-use (https://golang.org/ref/spec#For_range)
@@ -158,11 +173,48 @@ func main() {
 
 	f, err := os.Create("events.ics")
 	if err != nil {
-		log.Fatalf("couldn't open destination file: %v", err)
+		return fmt.Errorf("couldn't open destination file: %v", err)
 	}
 	defer f.Close()
 
 	if err := calendar.Encode(f); err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+}
+
+func main() {
+	url := flag.String("url", "", "write the URL from dfi.dk you wish to convert to an ICS file")
+	inputFile := flag.String("file", "", "a plain text file with newline-seperated URLs")
+	flag.Parse()
+
+	if *url == "" && *inputFile == "" {
+		log.Fatal("Please define either a URL (--url) or a file with URLs (--file)")
+	}
+
+	if *inputFile != "" {
+		events, err := getEventsFromFile(*inputFile)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		err = generateIcalFile(events)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
+
+	events, err := getEvents(*url)
+	if err != nil {
+		log.Fatalf("Error: %v\n", err)
+	}
+
+	err = generateIcalFile(events)
+	if err != nil {
 		log.Fatal(err)
 	}
 
