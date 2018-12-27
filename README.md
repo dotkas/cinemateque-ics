@@ -4,7 +4,13 @@ Parse the HTML of [cinemateket.dk](https://cinemateket.dk) and output an `.ics` 
 
 ## Build
 
-`go build -o .build/cin2ics`
+### Binary
+`make build`
+
+## Lambda function
+`make build-lambda`
+
+Upload .zip to Lambda, configure an API gateway
 
 ## Run
 
