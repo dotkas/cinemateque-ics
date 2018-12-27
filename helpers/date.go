@@ -3,6 +3,7 @@ package helpers
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -59,8 +60,20 @@ func ParseDate(datetime string) (time.Time, error) {
 	}
 	t := parsed[3]
 
+	// Detect next year
+	y := time.Now().Year()
+	monthOfEvent, err := strconv.Atoi(m)
+	if err != nil {
+		return time.Now(), err
+	}
+	monthNow := int(time.Now().Month())
+
+	if monthOfEvent < monthNow {
+		y = y + 1
+	}
+
 	layout := "2006-01-02T15:04:05.000Z"
-	str := fmt.Sprintf("%d-%s-%sT%s:00.000Z", time.Now().Year(), m, n, t)
+	str := fmt.Sprintf("%d-%s-%sT%s:00.000Z", y, m, n, t)
 	timestamp, err := time.Parse(layout, str)
 	if err != nil {
 		return time.Now(), fmt.Errorf("could not parse date: %s", err)
