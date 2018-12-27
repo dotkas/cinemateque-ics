@@ -55,7 +55,10 @@ func getDescription(doc *goquery.Document) (string, error) {
 			continue
 		}
 
-		return description, nil
+		re := regexp.MustCompile("[[:^ascii:]]")
+		t := re.ReplaceAllLiteralString(description, "")
+
+		return t, nil
 
 	}
 	return "", fmt.Errorf("no description found in document")
