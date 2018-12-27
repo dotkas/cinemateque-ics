@@ -1,3 +1,5 @@
+// +build lambda
+
 package main
 
 import (
@@ -13,7 +15,6 @@ func HandleRequest(ctx context.Context) (string, error) {
 	return "Hello World!", nil
 }
 
-func Handler() {
+func main() {
 	lambda.Start(HandleRequest)
-
 }

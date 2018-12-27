@@ -11,7 +11,7 @@ build:
 
 build-lambda:
 	make clean
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags lambda -o $(BINARY_NAME)
 
 test:
 	go test -v ./...
