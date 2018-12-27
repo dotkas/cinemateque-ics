@@ -11,7 +11,8 @@ build:
 
 build-lambda:
 	make clean
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags lambda -o $(BINARY_NAME)
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags lambda -o $(BINARY_NAME)_lambda
+	zip ${BINARY_NAME}_lambda.zip ${BINARY_NAME}_lambda
 
 test:
 	go test -v ./...
@@ -19,6 +20,8 @@ test:
 clean:
 	go clean -v ${MAIN_PACKAGE}
 	rm -rf $(BINARY_NAME)
+	rm -rf $(BINARY_NAME)_lambda
+	rm -rf $(BINARY_NAME)_lambda.zip
 
 run:
 	go run ${MAIN_PACKAGE}
