@@ -48,7 +48,6 @@ func eventHandler(rw http.ResponseWriter, req *http.Request) {
 }
 
 func startServer(addr string) error {
-
 	s := &http.Server{
 		Addr:         addr,
 		ReadTimeout:  5 * time.Second,
@@ -57,5 +56,4 @@ func startServer(addr string) error {
 	}
 
 	return s.ListenAndServe()
-
 }

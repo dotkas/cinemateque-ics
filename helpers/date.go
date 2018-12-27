@@ -3,11 +3,12 @@ package helpers
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 )
 
 func getMonthNumber(name string) (string, error) {
-	switch name {
+	switch strings.TrimSpace(name) {
 	case "januar":
 		return "01", nil
 	case "februar":

@@ -1,4 +1,12 @@
+# helpers
 *.ics
 *.txt
+*.zip
+
+# ide
 .idea
 .build
+dist/
+
+# env
+.DS_Store

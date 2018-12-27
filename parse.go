@@ -55,7 +55,10 @@ func getDescription(doc *goquery.Document) (string, error) {
 			continue
 		}
 
-		return description, nil
+		re := regexp.MustCompile("[[:^ascii:]]")
+		t := re.ReplaceAllLiteralString(description, "")
+
+		return t, nil
 
 	}
 	return "", fmt.Errorf("no description found in document")
@@ -127,6 +130,10 @@ func getEvents(url string) ([]ical.VEvent, error) {
 			}
 			events = append(events, e)
 		})
+	}
+
+	if len(events) == 0 {
+		return nil, fmt.Errorf("no runtimes found for title %s", title)
 	}
 
 	return events, nil
